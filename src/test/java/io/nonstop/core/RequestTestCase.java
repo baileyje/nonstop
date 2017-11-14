@@ -18,9 +18,7 @@ import java.util.List;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 
 /**
@@ -103,7 +101,7 @@ public class RequestTestCase {
     @Test
     public void testAccepts() {
         exchange.getRequestHeaders().put(Headers.ACCEPT, "application/json,text/html");
-        final List<String> accepts = request.accepts();
+        final List<String> accepts = request.getAccepts();
         assertNotNull(accepts);
         assertEquals(2, accepts.size());
         assertEquals("application/json", accepts.get(0));
@@ -127,9 +125,32 @@ public class RequestTestCase {
     }
 
     @Test
+    public void testAcceptsWildWithFilter() {
+        exchange.getRequestHeaders().put(Headers.ACCEPT, "*/*");
+        final String accepts = request.accepts("application/json", "text/html");
+        assertNotNull(accepts);
+        assertEquals("application/json", accepts);
+    }
+
+    @Test
+    public void testAcceptsWithExtension() {
+        exchange.getRequestHeaders().put(Headers.ACCEPT, "application/json,text/html");
+        final String accepts = request.accepts("json");
+        assertNotNull(accepts);
+        assertEquals("json", accepts);
+    }
+
+    @Test
+    public void testAcceptsNoHeader() {
+        final String accepts = request.accepts("application/json", "text/html");
+        assertNotNull(accepts);
+        assertEquals("application/json", accepts);
+    }
+
+    @Test
     public void testAcceptsEncodings() {
         exchange.getRequestHeaders().put(Headers.ACCEPT_ENCODING, "gzip,compress");
-        final List<String> accepts = request.acceptsEncodings();
+        final List<String> accepts = request.getAcceptsEncodings();
         assertNotNull(accepts);
         assertEquals(2, accepts.size());
         assertEquals("gzip", accepts.get(0));
@@ -153,9 +174,24 @@ public class RequestTestCase {
     }
 
     @Test
+    public void testAcceptsEncodingsWildWithFilter() {
+        exchange.getRequestHeaders().put(Headers.ACCEPT_ENCODING, "*");
+        final String accepts = request.acceptsEncodings("gzip", "compress");
+        assertNotNull(accepts);
+        assertEquals("gzip", accepts);
+    }
+
+    @Test
+    public void testAcceptsEncodingsNoHeader() {
+        final String accepts = request.acceptsEncodings("gzip", "compress");
+        assertNotNull(accepts);
+        assertEquals("gzip", accepts);
+    }
+
+    @Test
     public void testAcceptsCharsets() {
         exchange.getRequestHeaders().put(Headers.ACCEPT_CHARSET, "utf-8,utf-16");
-        final List<String> accepts = request.acceptsCharsets();
+        final List<String> accepts = request.getAcceptsCharsets();
         assertNotNull(accepts);
         assertEquals(2, accepts.size());
         assertEquals("utf-8", accepts.get(0));
@@ -179,9 +215,24 @@ public class RequestTestCase {
     }
 
     @Test
+    public void testAcceptsCharsetsWildWithFilter() {
+        exchange.getRequestHeaders().put(Headers.ACCEPT_CHARSET, "*");
+        final String accepts = request.acceptsCharsets("utf-8", "utf-16");
+        assertNotNull(accepts);
+        assertEquals("utf-8", accepts);
+    }
+
+    @Test
+    public void testAcceptsCharsetsNoHeader() {
+        final String accepts = request.acceptsCharsets("utf-8", "utf-16");
+        assertNotNull(accepts);
+        assertEquals("utf-8", accepts);
+    }
+
+    @Test
     public void testAcceptsLanguages() {
         exchange.getRequestHeaders().put(Headers.ACCEPT_LANGUAGE, "en,fr");
-        final List<String> accepts = request.acceptsLanguages();
+        final List<String> accepts = request.getAcceptsLanguages();
         assertNotNull(accepts);
         assertEquals(2, accepts.size());
         assertEquals("en", accepts.get(0));
@@ -202,5 +253,62 @@ public class RequestTestCase {
         final String accepts = request.acceptsLanguages("en" , "fr");
         assertNotNull(accepts);
         assertEquals("fr", accepts);
+    }
+
+    @Test
+    public void testAcceptsLanguagesNoHeader() {
+        final String accepts = request.acceptsLanguages("en" , "fr");
+        assertNotNull(accepts);
+        assertEquals("en", accepts);
+    }
+
+    @Test
+    public void testAcceptsLanguagesWildWithFilter() {
+        exchange.getRequestHeaders().put(Headers.ACCEPT_LANGUAGE, "*");
+        final String accepts = request.acceptsLanguages("en" , "fr");
+        assertNotNull(accepts);
+        assertEquals("en", accepts);
+    }
+
+    @Test
+    public void testIsInvalid() {
+        exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+        assertFalse(request.is("text/html"));
+    }
+
+    @Test
+    public void testIsValid() {
+        exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+        assertTrue(request.is("application/json"));
+    }
+
+    @Test
+    public void testIsSubTypeWildInvalid() {
+        exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, "text/html");
+        assertFalse(request.is("application/*"));
+    }
+
+    @Test
+    public void testIsSubTypeWildValid() {
+        exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+        assertTrue(request.is("application/*"));
+    }
+
+    @Test
+    public void testIsTypeWildValid() {
+        exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+        assertTrue(request.is("*/*"));
+    }
+
+    @Test
+    public void testIsExtensionInvalid() {
+        exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+        assertFalse(request.is("html"));
+    }
+
+    @Test
+    public void testIsExtensionValid() {
+        exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+        assertTrue(request.is("json"));
     }
 }

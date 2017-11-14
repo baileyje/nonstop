@@ -3,7 +3,7 @@ package io.nonstop.core.accept;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-class TypeParser implements ResolvableParser<Type> {
+public class TypeParser implements ResolvableParser<Type> {
 
     private static final Pattern mimePattern = Pattern.compile("^\\s*([^\\s/;]+)/([^;\\s]+)\\s*(?:;q=(.*))?$");
 

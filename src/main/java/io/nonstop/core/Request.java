@@ -4,6 +4,7 @@ import io.nonstop.core.accept.*;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.Headers;
+import io.undertow.util.MimeMappings;
 
 import java.util.*;
 
@@ -63,7 +64,7 @@ public class Request {
      *
      * @return all accepted types
      */
-    public List<String> accepts() {
+    public List<String> getAccepts() {
         final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT);
         if (acceptHeader != null) {
             final List<String> values = new LinkedList<>();
@@ -86,14 +87,15 @@ public class Request {
         if (acceptHeader != null) {
             for (Type type : WeightedResolver.resolve(acceptHeader, Type.parser)) {
                 for (String filter : types) {
-                    if (type.satisfies(filter)) {
-                        return type.toString();
+                    final String toCheck = filter.contains("/") ? filter : MimeMappings.DEFAULT.getMimeType(filter);
+                    if (type.satisfies(toCheck)) {
+                        return filter;
                     }
                 }
 
             }
         }
-        return null;
+        return types.length > 0 ? types[0] : null;
     }
 
     /**
@@ -101,7 +103,7 @@ public class Request {
      *
      * @return all accepted encodings
      */
-    public List<String> acceptsEncodings() {
+    public List<String> getAcceptsEncodings() {
         final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
         if (acceptHeader != null) {
             final List<String> values = new LinkedList<>();
@@ -125,12 +127,12 @@ public class Request {
             for (Encoding encoding : WeightedResolver.resolve(acceptHeader, Encoding.parser)) {
                 for (String filter : encodings) {
                     if (encoding.satisfies(filter)) {
-                        return encoding.toString();
+                        return filter;
                     }
                 }
             }
         }
-        return null;
+        return encodings.length > 0 ? encodings[0] : null;
     }
 
     /**
@@ -138,7 +140,7 @@ public class Request {
      *
      * @return all accepted charsets
      */
-    public List<String> acceptsCharsets() {
+    public List<String> getAcceptsCharsets() {
         final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_CHARSET);
         if (acceptHeader != null) {
             final List<String> values = new LinkedList<>();
@@ -162,12 +164,12 @@ public class Request {
             for (Charset charset : WeightedResolver.resolve(acceptHeader, Charset.parser)) {
                 for (String filter : charsets) {
                     if (charset.satisfies(filter)) {
-                        return charset.getCharset();
+                        return filter;
                     }
                 }
             }
         }
-        return null;
+        return charsets.length >  0 ? charsets[0] : null;
     }
 
     /**
@@ -175,7 +177,7 @@ public class Request {
      *
      * @return all accepted languages
      */
-    public List<String> acceptsLanguages() {
+    public List<String> getAcceptsLanguages() {
         final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
         if (acceptHeader != null) {
             final List<String> values = new LinkedList<>();
@@ -190,20 +192,37 @@ public class Request {
     /**
      * Returns the best language match from the provided list.
      *
-     * @param charsets the list of desired languages
+     * @param languages the list of desired languages
      * @return the best match if one exists
      */
-    public String acceptsLanguages(final String... charsets) {
+    public String acceptsLanguages(final String... languages) {
         final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
         if (acceptHeader != null) {
             for (Language language : WeightedResolver.resolve(acceptHeader, Language.parser)) {
-                for (String filter : charsets) {
+                for (String filter : languages) {
                     if (language.satisfies(filter)) {
-                        return language.getLanguage();
+                        return filter;
                     }
                 }
             }
         }
-        return null;
+        return languages.length > 0 ? languages[0] : null;
     }
+
+    /**
+     * Determine whether the request content type is satisfied by the provided type.
+     *
+     * @param typeStr the content type to check
+     * @return true if satisfied, false if not
+     */
+    public boolean is(final String typeStr) {
+        final Deque<String> typeHeader = exchange.getRequestHeaders().get(Headers.CONTENT_TYPE);
+        if (typeHeader != null) {
+            final String toCheck = typeStr.contains("/") ? typeStr : MimeMappings.DEFAULT.getMimeType(typeStr);
+            final Type type = Type.parser.parse(toCheck);
+            return type.satisfies(typeHeader.peek());
+        }
+        return false;
+    }
+
 }
