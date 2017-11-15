@@ -19,13 +19,38 @@ public class Request {
         OPTIONS, HEAD, GET, POST, PUT, PATCH, DELETE, UNKNOWN;
     }
 
+    private final App app;
+
     private final HttpServerExchange exchange;
 
-    Request(final HttpServerExchange exchange) {
+    private List<Type> resolvedAccepts;
+
+    private List<Encoding> resolvedAcceptsEncodings;
+
+    private List<Charset> resolvedAcceptsCharsets;
+
+    private List<Language> resolvedAcceptsLanguages;
+
+    Request(final App app, final HttpServerExchange exchange) {
+        this.app = app;
         this.exchange = exchange;
     }
 
-    public Method getMethod() {
+    /**
+     * Return the app for this request.
+     *
+     * @return the current App instance
+     */
+    public App app() {
+        return app;
+    }
+
+    /**
+     * Get the request method
+     *
+     * @return the method
+     */
+    public Method method() {
         try {
             return Method.valueOf(exchange.getRequestMethod().toString());
         } catch (IllegalArgumentException e) {
@@ -33,30 +58,70 @@ public class Request {
         }
     }
 
-    public String getProtocol() {
+    /**
+     * Get the request protocol
+     *
+     * @return the protocol
+     */
+    public String protocol() {
         return exchange.getProtocol().toString();
     }
 
-    public String getHostName() {
+    /**
+     * Get the request host name
+     *
+     * @return the host name
+     */
+    public String hostname() {
         return exchange.getHostName();
     }
 
-    public String getPath() {
+    /**
+     * Get the request path
+     *
+     * @return the path
+     */
+    public String path() {
         return exchange.getRequestPath();
     }
 
-    public Map<String, Deque<String>> getQuery() {
+    /**
+     * Get the query parameters
+     *
+     * @return the parameters
+     */
+    public Map<String, Deque<String>> query() {
         // TODO:  Handle nested props:  eg: ?test[foo]=1&test[bar]=2
         final Map<String, Deque<String>> query = exchange.getQueryParameters();
         return query != null ? query : Collections.<String, Deque<String>>emptyMap();
     }
 
+    /**
+     * Get the value for a given header name.
+     *
+     * @param headerName the header name
+     * @return returns the header value
+     */
     public String get(final String headerName) {
         return exchange.getRequestHeaders().get(headerName, 0);
     }
 
-    public Map<String, Cookie> getCookies() {
+    /**
+     * Get the request cookies.
+     *
+     * @return the cookies
+     */
+    public Map<String, Cookie> cookies() {
         return exchange.getRequestCookies();
+    }
+
+    private List<Type> resolvedAccepts() {
+        if (resolvedAccepts != null) {
+            return resolvedAccepts;
+        }
+        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT);
+        this.resolvedAccepts = acceptHeader != null ? WeightedResolver.resolve(acceptHeader, Type.parser) : Collections.<Type>emptyList();
+        return resolvedAccepts;
     }
 
     /**
@@ -64,16 +129,12 @@ public class Request {
      *
      * @return all accepted types
      */
-    public List<String> getAccepts() {
-        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT);
-        if (acceptHeader != null) {
-            final List<String> values = new LinkedList<>();
-            for (Type type : WeightedResolver.resolve(acceptHeader, Type.parser)) {
-                values.add(type.toString());
-            }
-            return values;
+    public List<String> accepts() {
+        final List<String> values = new LinkedList<>();
+        for (Type type : resolvedAccepts()) {
+            values.add(type.toString());
         }
-        return Collections.emptyList();
+        return values;
     }
 
     /**
@@ -83,19 +144,25 @@ public class Request {
      * @return the best match if one exists
      */
     public String accepts(final String... types) {
-        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT);
-        if (acceptHeader != null) {
-            for (Type type : WeightedResolver.resolve(acceptHeader, Type.parser)) {
-                for (String filter : types) {
-                    final String toCheck = filter.contains("/") ? filter : MimeMappings.DEFAULT.getMimeType(filter);
-                    if (type.satisfies(toCheck)) {
-                        return filter;
-                    }
+        for (Type type : resolvedAccepts()) {
+            for (String filter : types) {
+                final String toCheck = filter.contains("/") ? filter : MimeMappings.DEFAULT.getMimeType(filter);
+                if (type.satisfies(toCheck)) {
+                    return filter;
                 }
-
             }
+
         }
         return types.length > 0 ? types[0] : null;
+    }
+
+    private List<Encoding> resolvedAcceptsEncodings() {
+        if (resolvedAcceptsEncodings != null) {
+            return resolvedAcceptsEncodings;
+        }
+        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
+        this.resolvedAcceptsEncodings = acceptHeader != null ? WeightedResolver.resolve(acceptHeader, Encoding.parser) : Collections.<Encoding>emptyList();
+        return resolvedAcceptsEncodings;
     }
 
     /**
@@ -103,16 +170,12 @@ public class Request {
      *
      * @return all accepted encodings
      */
-    public List<String> getAcceptsEncodings() {
-        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
-        if (acceptHeader != null) {
-            final List<String> values = new LinkedList<>();
-            for (Encoding encoding : WeightedResolver.resolve(acceptHeader, Encoding.parser)) {
-                values.add(encoding.toString());
-            }
-            return values;
+    public List<String> acceptsEncodings() {
+        final List<String> values = new LinkedList<>();
+        for (Encoding encoding : resolvedAcceptsEncodings()) {
+            values.add(encoding.toString());
         }
-        return Collections.emptyList();
+        return values;
     }
 
     /**
@@ -122,17 +185,23 @@ public class Request {
      * @return the best match if one exists
      */
     public String acceptsEncodings(final String... encodings) {
-        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
-        if (acceptHeader != null) {
-            for (Encoding encoding : WeightedResolver.resolve(acceptHeader, Encoding.parser)) {
-                for (String filter : encodings) {
-                    if (encoding.satisfies(filter)) {
-                        return filter;
-                    }
+        for (Encoding encoding : resolvedAcceptsEncodings()) {
+            for (String filter : encodings) {
+                if (encoding.satisfies(filter)) {
+                    return filter;
                 }
             }
         }
         return encodings.length > 0 ? encodings[0] : null;
+    }
+
+    private List<Charset> resolveAcceptsCharsets() {
+        if (resolvedAcceptsCharsets != null) {
+            return resolvedAcceptsCharsets;
+        }
+        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_CHARSET);
+        this.resolvedAcceptsCharsets = acceptHeader != null ? WeightedResolver.resolve(acceptHeader, Charset.parser) : Collections.<Charset>emptyList();
+        return resolvedAcceptsCharsets;
     }
 
     /**
@@ -140,16 +209,12 @@ public class Request {
      *
      * @return all accepted charsets
      */
-    public List<String> getAcceptsCharsets() {
-        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_CHARSET);
-        if (acceptHeader != null) {
-            final List<String> values = new LinkedList<>();
-            for (Charset charset : WeightedResolver.resolve(acceptHeader, Charset.parser)) {
-                values.add(charset.getCharset());
-            }
-            return values;
+    public List<String> acceptsCharsets() {
+        final List<String> values = new LinkedList<>();
+        for (Charset charset : resolveAcceptsCharsets()) {
+            values.add(charset.getCharset());
         }
-        return Collections.emptyList();
+        return values;
     }
 
     /**
@@ -159,17 +224,23 @@ public class Request {
      * @return the best match if one exists
      */
     public String acceptsCharsets(final String... charsets) {
-        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_CHARSET);
-        if (acceptHeader != null) {
-            for (Charset charset : WeightedResolver.resolve(acceptHeader, Charset.parser)) {
-                for (String filter : charsets) {
-                    if (charset.satisfies(filter)) {
-                        return filter;
-                    }
+        for (Charset charset : resolveAcceptsCharsets()) {
+            for (String filter : charsets) {
+                if (charset.satisfies(filter)) {
+                    return filter;
                 }
             }
         }
         return charsets.length >  0 ? charsets[0] : null;
+    }
+
+    private List<Language> resolvedAcceptsLanguages() {
+        if (resolvedAcceptsLanguages != null) {
+            return resolvedAcceptsLanguages;
+        }
+        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
+        this.resolvedAcceptsLanguages = acceptHeader != null ? WeightedResolver.resolve(acceptHeader, Language.parser) : Collections.<Language>emptyList();
+        return resolvedAcceptsLanguages;
     }
 
     /**
@@ -177,16 +248,12 @@ public class Request {
      *
      * @return all accepted languages
      */
-    public List<String> getAcceptsLanguages() {
-        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
-        if (acceptHeader != null) {
-            final List<String> values = new LinkedList<>();
-            for (Language language : WeightedResolver.resolve(acceptHeader, Language.parser)) {
-                values.add(language.getLanguage());
-            }
-            return values;
+    public List<String> acceptsLanguages() {
+        final List<String> values = new LinkedList<>();
+        for (Language language : resolvedAcceptsLanguages()) {
+            values.add(language.getLanguage());
         }
-        return Collections.emptyList();
+        return values;
     }
 
     /**
@@ -196,13 +263,10 @@ public class Request {
      * @return the best match if one exists
      */
     public String acceptsLanguages(final String... languages) {
-        final Deque<String> acceptHeader = exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE);
-        if (acceptHeader != null) {
-            for (Language language : WeightedResolver.resolve(acceptHeader, Language.parser)) {
-                for (String filter : languages) {
-                    if (language.satisfies(filter)) {
-                        return filter;
-                    }
+        for (Language language : resolvedAcceptsLanguages()) {
+            for (String filter : languages) {
+                if (language.satisfies(filter)) {
+                    return filter;
                 }
             }
         }
@@ -225,4 +289,8 @@ public class Request {
         return false;
     }
 
+    @Override
+    public String toString() {
+        return "Request[" + method().toString() + " " + path() + " " + protocol() +  "]";
+    }
 }

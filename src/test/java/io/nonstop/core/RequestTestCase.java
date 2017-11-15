@@ -36,49 +36,49 @@ public class RequestTestCase {
     public void setUp() {
         connection = createMock(AbstractServerConnection.class);
         exchange = new HttpServerExchange(connection);
-        request = new Request(exchange);
+        request = new Request(new App(), exchange);
     }
 
     @Test
     public void testMethodKnown() {
         exchange.setRequestMethod(Methods.GET);
-        assertEquals(Request.Method.GET, request.getMethod());
+        assertEquals(Request.Method.GET, request.method());
     }
 
     @Test
     public void testMethodUnknown() {
         exchange.setRequestMethod(Methods.LOCK);
-        assertEquals(Request.Method.UNKNOWN, request.getMethod());
+        assertEquals(Request.Method.UNKNOWN, request.method());
     }
 
     @Test
     public void testProtocol() {
         final HttpString protocol = Protocols.HTTP_1_1;
         exchange.setProtocol(protocol);
-        assertEquals(protocol.toString(), request.getProtocol());
+        assertEquals(protocol.toString(), request.protocol());
     }
 
     @Test
     public void testHostName() {
         final String hostName = "localhost";
         exchange.getRequestHeaders().put(Headers.HOST, hostName);
-        assertEquals(hostName, request.getHostName());
+        assertEquals(hostName, request.hostname());
     }
 
     @Test
     public void testPath() {
         final String path = "/some/path/to/something";
         exchange.setRequestPath(path);
-        assertEquals(path, request.getPath());
+        assertEquals(path, request.path());
     }
 
     @Test
     public void testQuery() {
         exchange.addQueryParam("test1", "value");
         exchange.addQueryParam("test2", "value2");
-        assertEquals("value", request.getQuery().get("test1").getFirst());
-        assertEquals("value2", request.getQuery().get("test2").getFirst());
-        assertNull(request.getQuery().get("not-found"));
+        assertEquals("value", request.query().get("test1").getFirst());
+        assertEquals("value2", request.query().get("test2").getFirst());
+        assertNull(request.query().get("not-found"));
     }
 
     @Test
@@ -95,13 +95,13 @@ public class RequestTestCase {
         expect(connection.getUndertowOptions()).andReturn(OptionMap.EMPTY).anyTimes();
         replay(connection);
         exchange.getRequestCookies().put("session", new CookieImpl("session", "12345abcde"));
-        assertEquals("12345abcde", request.getCookies().get("session").getValue());
+        assertEquals("12345abcde", request.cookies().get("session").getValue());
     }
 
     @Test
     public void testAccepts() {
         exchange.getRequestHeaders().put(Headers.ACCEPT, "application/json,text/html");
-        final List<String> accepts = request.getAccepts();
+        final List<String> accepts = request.accepts();
         assertNotNull(accepts);
         assertEquals(2, accepts.size());
         assertEquals("application/json", accepts.get(0));
@@ -150,7 +150,7 @@ public class RequestTestCase {
     @Test
     public void testAcceptsEncodings() {
         exchange.getRequestHeaders().put(Headers.ACCEPT_ENCODING, "gzip,compress");
-        final List<String> accepts = request.getAcceptsEncodings();
+        final List<String> accepts = request.acceptsEncodings();
         assertNotNull(accepts);
         assertEquals(2, accepts.size());
         assertEquals("gzip", accepts.get(0));
@@ -191,7 +191,7 @@ public class RequestTestCase {
     @Test
     public void testAcceptsCharsets() {
         exchange.getRequestHeaders().put(Headers.ACCEPT_CHARSET, "utf-8,utf-16");
-        final List<String> accepts = request.getAcceptsCharsets();
+        final List<String> accepts = request.acceptsCharsets();
         assertNotNull(accepts);
         assertEquals(2, accepts.size());
         assertEquals("utf-8", accepts.get(0));
@@ -232,7 +232,7 @@ public class RequestTestCase {
     @Test
     public void testAcceptsLanguages() {
         exchange.getRequestHeaders().put(Headers.ACCEPT_LANGUAGE, "en,fr");
-        final List<String> accepts = request.getAcceptsLanguages();
+        final List<String> accepts = request.acceptsLanguages();
         assertNotNull(accepts);
         assertEquals(2, accepts.size());
         assertEquals("en", accepts.get(0));
