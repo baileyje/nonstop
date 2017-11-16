@@ -2,16 +2,18 @@ package io.nonstop.core;
 
 import io.nonstop.core.util.ConfigMap;
 import io.nonstop.core.util.Path;
-import io.undertow.io.IoCallback;
-import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+/**
+ * Object representing the HTTP request.
+ *
+ * @author John Bailey
+ */
 public class Response {
 
     private final App app;

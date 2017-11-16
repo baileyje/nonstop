@@ -23,6 +23,10 @@ public class Request {
 
     private final HttpServerExchange exchange;
 
+    private String path;
+
+    private Map<String, String> params = new HashMap<>();
+
     private List<Type> resolvedAccepts;
 
     private List<Encoding> resolvedAcceptsEncodings;
@@ -34,6 +38,7 @@ public class Request {
     Request(final App app, final HttpServerExchange exchange) {
         this.app = app;
         this.exchange = exchange;
+        this.path = exchange.getRequestPath();
     }
 
     /**
@@ -82,7 +87,16 @@ public class Request {
      * @return the path
      */
     public String path() {
-        return exchange.getRequestPath();
+        return path;
+    }
+
+    /**
+     * Set the current request path.
+     *
+     * @param path the current path
+     */
+    public void path(final String path) {
+        this.path = path;
     }
 
     /**
@@ -94,6 +108,15 @@ public class Request {
         // TODO:  Handle nested props:  eg: ?test[foo]=1&test[bar]=2
         final Map<String, Deque<String>> query = exchange.getQueryParameters();
         return query != null ? query : Collections.<String, Deque<String>>emptyMap();
+    }
+
+    /**
+     * Get the request path parameters.
+     *
+     * @return the params
+     */
+    public Map<String, String> params() {
+        return params;
     }
 
     /**
