@@ -1,13 +1,17 @@
 package io.nonstop.core;
 
-import io.nonstop.core.util.ConfigMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.nonstop.core.util.data.DataNode;
 import io.nonstop.core.util.Path;
+import io.nonstop.core.util.data.ValueDataNode;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 
 /**
  * Object representing the HTTP request.
@@ -20,7 +24,7 @@ public class Response {
 
     private final HttpServerExchange exchange;
 
-    private final ConfigMap locals = new ConfigMap();
+    private final DataNode locals = new ValueDataNode(new HashMap<>());
 
     Response(App app, HttpServerExchange exchange) {
         this.app = app;
@@ -41,7 +45,7 @@ public class Response {
      *
      * @return the locals
      */
-    public ConfigMap locals() {
+    public DataNode locals() {
         return locals;
     }
 
@@ -202,13 +206,30 @@ public class Response {
         json(object);
     }
 
+    private void writeJson(final Object object) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            mapper.writeValue(exchange.getOutputStream(), object);
+            exchange.endExchange();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     /**
-     * Send a JSON representation of an Object.  Alias to 'json'
+     * Send a JSON representation of an Object.
      *
      * @param object the object to jsonify
      */
     public void json(final Object object) {
-        // TODO: Serialize JSON
+        type("application/json");
+        exchange.startBlocking();
+        if( exchange.isInIoThread() ) {
+            exchange.dispatch(() -> {
+                writeJson(object);
+            });
+        } else {
+            writeJson(object);
+        }
     }
 
     /**

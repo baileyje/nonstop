@@ -1,14 +1,15 @@
 package io.nonstop.core;
 
 
-import io.nonstop.core.middleware.Chain;
 import io.nonstop.core.middleware.Context;
 import io.nonstop.core.router.Router;
-import io.nonstop.core.util.ConfigMap;
+import io.nonstop.core.util.data.DataNode;
+import io.nonstop.core.util.data.ValueDataNode;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
+import java.util.HashMap;
 
 
 /**
@@ -20,7 +21,7 @@ public class App extends Router {
 
     private Undertow server;
 
-    private final ConfigMap locals = new ConfigMap();
+    private final DataNode locals = new ValueDataNode(new HashMap<>());
 
     private void handleRequest(final HttpServerExchange exchange) throws Exception {
         final Request request = new Request(this, exchange);
@@ -77,7 +78,7 @@ public class App extends Router {
      *
      * @return the locals
      */
-    public ConfigMap locals() {
+    public DataNode locals() {
         return locals;
     }
 

@@ -18,8 +18,8 @@ public interface Middleware {
      *
      * @param req the request
      * @param res the response
-     * @param context the context
+     * @param ctx the context
      */
-    void handle(Request req, Response res, Context context);
+    void handle(Request req, Response res, Context ctx);
 
 }

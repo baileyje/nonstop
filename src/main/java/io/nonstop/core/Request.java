@@ -1,11 +1,15 @@
 package io.nonstop.core;
 
 import io.nonstop.core.accept.*;
+import io.nonstop.core.util.data.DataNode;
+import io.nonstop.core.util.data.ValueDataNode;
+import io.undertow.io.UndertowInputStream;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.Headers;
 import io.undertow.util.MimeMappings;
 
+import java.io.InputStream;
 import java.util.*;
 
 /**
@@ -35,6 +39,8 @@ public class Request {
 
     private List<Language> resolvedAcceptsLanguages;
 
+    private DataNode body = new ValueDataNode(null);
+
     Request(final App app, final HttpServerExchange exchange) {
         this.app = app;
         this.exchange = exchange;
@@ -48,6 +54,19 @@ public class Request {
      */
     public App app() {
         return app;
+    }
+
+    /**
+     * Return the request body.
+     *
+     * @return the body
+     */
+    public DataNode body() {
+        return body;
+    }
+
+    public void body(final DataNode body) {
+        this.body = body;
     }
 
     /**
@@ -310,6 +329,19 @@ public class Request {
             return type.satisfies(typeHeader.peek());
         }
         return false;
+    }
+
+    /**
+     * Return the input stream for the request.
+     *
+     * @return the request stream
+     */
+    public InputStream stream() {
+        return new UndertowInputStream(exchange);
+    }
+
+    public void dispatch(final Runnable runnable) {
+        exchange.dispatch(null, runnable);
     }
 
     @Override

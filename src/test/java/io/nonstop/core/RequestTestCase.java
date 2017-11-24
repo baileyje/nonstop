@@ -69,6 +69,7 @@ public class RequestTestCase {
     public void testPath() {
         final String path = "/some/path/to/something";
         exchange.setRequestPath(path);
+        request = new Request(new App(), exchange);
         assertEquals(path, request.path());
     }
 
